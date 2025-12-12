@@ -1,0 +1,259 @@
+#pragma region VEXcode Generated Robot Configuration
+// Make sure all required headers are included.
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+#include <string.h>
+
+
+#include "vex.h"
+
+using namespace vex;
+
+// Brain should be defined by default
+brain Brain;
+
+
+// START V5 MACROS
+#define waitUntil(condition)                                                   \
+  do {                                                                         \
+    wait(5, msec);                                                             \
+  } while (!(condition))
+
+#define repeat(iterations)                                                     \
+  for (int iterator = 0; iterator < iterations; iterator++)
+// END V5 MACROS
+
+
+// Robot configuration code.
+
+// Drive motors
+motor leftMotorA = motor(PORT19, ratio6_1, true);
+motor leftMotorB = motor(PORT20, ratio6_1, false);
+motor leftMotorC = motor(PORT9, ratio6_1, true);
+motor_group LeftDriveSmart = motor_group(leftMotorA, leftMotorB, leftMotorC);
+
+motor rightMotorA = motor(PORT11, ratio6_1, true);
+motor rightMotorB = motor(PORT12, ratio6_1, false);
+motor rightMotorC = motor(PORT1, ratio6_1, false);
+motor_group RightDriveSmart = motor_group(rightMotorA, rightMotorB, rightMotorC);
+inertial DrivetrainInertial = inertial(PORT21);
+drivetrain Drivetrain = drivetrain(LeftDriveSmart, RightDriveSmart, 219.44, 330.2, 317.5, mm, 1.3333);
+
+// Extra motors
+motor IntakeStage3(PORT15, ratio18_1, true);
+motor IntakeStage1(PORT17, ratio18_1, false);
+motor IntakeStage2(PORT14, ratio18_1, false);
+
+// Pneumatics
+digital_out Descore(Brain.ThreeWirePort.A);
+digital_out Matchload(Brain.ThreeWirePort.B);
+
+
+// generating and setting random seed
+void initializeRandomSeed(){
+  int systemTime = Brain.Timer.systemHighResolution();
+  double batteryCurrent = Brain.Battery.current();
+  double batteryVoltage = Brain.Battery.voltage(voltageUnits::mV);
+
+  // Combine these values into a single integer
+  int seed = int(batteryVoltage + batteryCurrent * 100) + systemTime;
+
+  // Set the seed
+  srand(seed);
+}
+
+
+
+void vexcodeInit() {
+
+  //Initializing random seed.
+  initializeRandomSeed(); 
+}
+
+
+// Helper to make playing sounds from the V5 in VEXcode easier and
+// keeps the code cleaner by making it clear what is happening.
+void playVexcodeSound(const char *soundName) {
+  printf("VEXPlaySound:%s\n", soundName);
+  wait(5, msec);
+}
+
+#pragma endregion VEXcode Generated Robot Configuration
+
+// Global controller declaration
+controller Controller1 = controller(primary);
+// ----------------------------------------------------------------------------
+//                                                                            
+//    Project: 44585A - HSI ECHO - Pushback 11/5/2025 Code                                            
+//    Author: Marco Sanchez
+//    Created: 11/5/2025
+//    Configuration:#1      
+//                                                                            
+// ----------------------------------------------------------------------------
+
+// Include the V5 Library
+#include "vex.h"
+
+// Allows for easier use of the VEX Library
+using namespace vex;
+
+// Begin project code
+
+void preAutonomous(void) {
+  // actions to do when the program starts
+  Brain.Screen.clearScreen();
+  Brain.Screen.print("pre auton code");
+  wait(1, seconds);
+}
+
+void autonomous(void) {
+  //Ensure the drivetrain velocities are slowed for accuracy
+  Drivetrain.setDriveVelocity(35, percent);
+  Drivetrain.setTurnVelocity(30, percent);
+  IntakeStage3.setVelocity(100, percent);
+  IntakeStage2.setVelocity(100, percent);
+  IntakeStage1.setVelocity(100, percent);
+
+//first turns, aligns with the group of 4 blocks directly in front of our starting position.
+  Drivetrain.driveFor(forward, 35, inches);
+  Drivetrain.turnFor(left, 15, degrees) ;
+  IntakeStage1.spin(reverse);
+  IntakeStage2.spin(forward);
+  Drivetrain.driveFor(forward, 40, inches);
+  wait(2, seconds);
+  IntakeStage1.stop();
+  IntakeStage2.stop();
+  Drivetrain.turnFor(right, 15, degrees) ;
+  Drivetrain.driveFor(reverse, 40, inches);
+  Drivetrain.turnFor(left, 90, degrees) ;
+  Drivetrain.driveFor(forward, 42, inches);
+  Drivetrain.turnFor(left, 80, degrees) ;
+  Drivetrain.setTimeout(2, seconds);
+  Drivetrain.driveFor(reverse, 100, inches);
+  wait(1, seconds);
+  IntakeStage2.spin(forward);
+  IntakeStage3.spin(forward);
+  wait(3, seconds);
+  Matchload.set(true);  // Extend piston
+  Drivetrain.driveFor(forward, 40, inches);
+  IntakeStage3.stop() ;
+  Drivetrain.turnFor(right, 10, degrees) ;
+  Drivetrain.setTimeout(3, seconds);
+  Drivetrain.driveFor(forward, 55, inches);
+  IntakeStage1.spin(reverse);
+  IntakeStage2.spin(forward);
+  //Matchloader Tube
+  Drivetrain.driveFor(reverse, 5, inches);
+  Drivetrain.driveFor(forward, 5, inches);
+  Drivetrain.driveFor(reverse, 5, inches);
+  Drivetrain.driveFor(forward, 5, inches);
+  Drivetrain.driveFor(reverse, 5, inches);
+  Drivetrain.driveFor(forward, 5, inches);
+  Drivetrain.driveFor(reverse, 5, inches);
+  Drivetrain.driveFor(forward, 5, inches);
+  Drivetrain.driveFor(reverse, 5, inches);
+  Drivetrain.driveFor(forward, 5, inches);
+  Drivetrain.driveFor(reverse, 15, inches);
+  //Drivetrain.turnFor(left, 5, degrees) ;
+  Drivetrain.setTimeout(1, seconds);
+  Drivetrain.driveFor(reverse, 105, inches);
+  IntakeStage3.spin(forward);
+  IntakeStage2.spin(forward);
+  wait(3, seconds);  
+  Drivetrain.setDriveVelocity(70, percent); 
+  Drivetrain.driveFor(forward, 15, inches);
+  Drivetrain.driveFor(reverse, 17, inches);
+  Drivetrain.setDriveVelocity(40, percent);
+  Matchload.set(false);  // Retract piston 
+  
+  Drivetrain.driveFor(forward, 70, inches);
+  Drivetrain.turnFor(left, 90, degrees) ;
+  Drivetrain.driveFor(forward, 40, inches);
+  Drivetrain.turnFor(right, 90, degrees) ;
+  Drivetrain.setDriveVelocity(100, percent);
+  Drivetrain.driveFor(forward, 85, inches);
+  //Park Attempt
+//Drivetrain lines up with the goal
+
+}
+
+void userControl(void) {
+  Brain.Screen.clearScreen();
+  while (true) {
+  Drivetrain.setDriveVelocity(100, percent);
+  Drivetrain.setTurnVelocity(100, percent);
+    int drivePower = Controller1.Axis2.position();
+    int turnPower = Controller1.Axis4.position();
+
+    int leftSpeed = drivePower + turnPower;
+    int rightSpeed = drivePower - turnPower;
+
+    LeftDriveSmart.setVelocity(leftSpeed, percent);
+    RightDriveSmart.setVelocity(rightSpeed, percent);
+    LeftDriveSmart.spin(forward);
+    RightDriveSmart.spin(forward);
+
+    IntakeStage3.setVelocity(100, percent);
+    IntakeStage2.setVelocity(100, percent);
+    IntakeStage1.setVelocity(100, percent);
+    IntakeStage3.setMaxTorque(100, percent);
+    IntakeStage2.setMaxTorque(100, percent);
+    IntakeStage1.setMaxTorque(100, percent);
+
+    if (Controller1.ButtonL1.pressing()) {
+      IntakeStage3.spin(forward);
+    } else if (Controller1.ButtonL2.pressing()) {
+      IntakeStage3.spin(reverse);
+    } else {
+      IntakeStage3.stop(coast);
+    }
+
+    if (Controller1.ButtonR1.pressing()) {
+      IntakeStage1.spin(reverse);
+      IntakeStage2.spin(forward);
+    } else if (Controller1.ButtonR2.pressing()) {
+      IntakeStage1.spin(forward);
+      IntakeStage2.spin(reverse);
+    } else {
+      IntakeStage1.stop(coast);
+      IntakeStage2.stop(coast);
+    }
+
+    // Pneumatic controls
+    // Descore Pneumatic piston control with ButtonX and ButtonA
+    if (Controller1.ButtonX.pressing()) {
+      Descore.set(true);  // Extend piston
+    } else if (Controller1.ButtonA.pressing()) {
+      Descore.set(false); // Retract piston
+    }
+    // Matchload Pnuematic piston control with ButtonY and ButtonB
+    if (Controller1.ButtonY.pressing()) {
+      Matchload.set(true);  // Extend piston
+    } else if (Controller1.ButtonB.pressing()) {
+      Matchload.set(false); // Retract piston
+    }
+
+    wait(20, msec);
+  }
+}
+
+int main() {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  vexcodeInit();
+  // create competition instance
+  competition Competition;
+
+  // Set up callbacks for autonomous and driver control periods.
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(userControl);
+
+  // Run the pre-autonomous function.
+  preAutonomous();
+
+  // Prevent main from exiting with an infinite loop.
+  while (true) {
+    wait(100, msec);
+  }
+}
