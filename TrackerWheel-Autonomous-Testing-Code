@@ -1,0 +1,104 @@
+#include "vex.h"
+using namespace vex;
+
+// ------------------------------------------------------------
+// CONFIGURATION
+// ------------------------------------------------------------
+
+// Drivetrain motors
+motor LeftFront  = motor(PORT1, ratio18_1, false);
+motor LeftBack   = motor(PORT2, ratio18_1, false);
+motor RightFront = motor(PORT3, ratio18_1, true);
+motor RightBack  = motor(PORT4, ratio18_1, true);
+
+// Tracking wheel (rotation sensor OR unpowered motor)
+rotation Tracker = rotation(PORT10);   // Change port as needed
+
+// Controller
+controller Controller1 = controller(primary);
+
+// ------------------------------------------------------------
+// CONSTANTS //TraCKER wheel
+// ------------------------------------------------------------
+
+// Tracking wheel diameter (inches)
+const double WHEEL_DIAMETER = 2.75;
+const double WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * M_PI;
+
+// ------------------------------------------------------------
+//  FUNCTIONS
+// ------------------------------------------------------------
+
+// Convert tracking wheel degrees → inches
+double getTrackerDistance() {
+  double degrees = Tracker.position(degrees);
+  return (degrees / 360.0) * WHEEL_CIRCUMFERENCE;
+}
+
+// Drive forward using tracking wheel feedback
+void driveForward(double targetInches, double speed = 40) {
+  Tracker.resetPosition();
+
+  while (true) {
+    double traveled = getTrackerDistance();
+
+    if (traveled >= targetInches)  //cool script
+      break;
+
+    LeftFront.spin(fwd, speed, percent);
+    LeftBack.spin(fwd, speed, percent);
+    RightFront.spin(fwd, speed, percent);
+    RightBack.spin(fwd, speed, percent);
+
+    wait(10, msec);
+  }
+
+  LeftFront.stop(brake);
+  LeftBack.stop(brake);
+  RightFront.stop(brake);
+  RightBack.stop(brake);
+}
+
+// ------------------------------------------------------------
+// AUTONOMOUS
+// ------------------------------------------------------------
+
+void autonomous(void) {
+  // Example autonomous routine
+  driveForward(24);   // Drive forward 24 inches
+  wait(0.5, seconds);
+  driveForward(12);   // Drive forward another 12 inches
+}
+
+// ------------------------------------------------------------
+// USER CONTROL (TANK DRIVE)
+// ------------------------------------------------------------
+
+void usercontrol(void) {
+  while (true) {
+    int leftSpeed  = Controller1.Axis3.position();
+    int rightSpeed = Controller1.Axis2.position();
+
+    LeftFront.spin(fwd, leftSpeed, percent);
+    LeftBack.spin(fwd, leftSpeed, percent);
+    RightFront.spin(fwd, rightSpeed, percent);
+    RightBack.spin(fwd, rightSpeed, percent);
+
+    wait(20, msec);
+  }
+}
+
+// ------------------------------------------------------------
+// MAIN
+// ------------------------------------------------------------
+
+int main() {
+  vexcodeInit();
+
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(usercontrol);
+
+  while (true) {
+    wait(100, msec);
+  }
+}
