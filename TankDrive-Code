@@ -1,0 +1,18 @@
+void userControl(void) {
+  Brain.Screen.clearScreen();
+  while (true) {
+
+    // These drivetrain velocity settings don't matter for tank drive,
+    // but you can leave them if you want.
+    Drivetrain.setDriveVelocity(100, percent);
+    Drivetrain.setTurnVelocity(100, percent);
+
+    // Tank drive: each stick controls its own side
+    int leftSpeed  = Controller1.Axis3.position();  // Left stick vertical
+    int rightSpeed = Controller1.Axis2.position();  // Right stick vertical
+
+    LeftDriveSmart.setVelocity(leftSpeed, percent);
+    RightDriveSmart.setVelocity(rightSpeed, percent);
+
+    LeftDriveSmart.spin(forward);
+    RightDriveSmart.spin(forward);
