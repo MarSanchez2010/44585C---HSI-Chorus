@@ -1,0 +1,426 @@
+#pragma region VEXcode Generated Robot Configuration
+// Make sure all required headers are included.
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+#include <string.h>
+
+#include "vex.h"
+
+using namespace vex;
+
+// Brain should be defined by default
+brain Brain;
+
+// START V5 MACROS
+#define waitUntil(condition)                                                   \
+  do {                                                                         \
+    wait(5, msec);                                                             \
+  } while (!(condition))
+
+#define repeat(iterations)                                                     \
+  for (int iterator = 0; iterator < iterations; iterator++)
+// END V5 MACROS
+
+// Robot configuration code.
+// Drive motors
+motor leftMotorA = motor(PORT1, ratio6_1, false);
+motor leftMotorB = motor(PORT2, ratio6_1, true);
+motor leftMotorC = motor(PORT3, ratio6_1, true);
+motor_group LeftDriveSmart = motor_group(leftMotorA, leftMotorB, leftMotorC);
+
+motor rightMotorA = motor(PORT8, ratio6_1, false);
+motor rightMotorB = motor(PORT9, ratio6_1, true);
+motor rightMotorC = motor(PORT10, ratio6_1, false);
+motor_group RightDriveSmart = motor_group(rightMotorA, rightMotorB, rightMotorC);
+drivetrain Drivetrain = drivetrain(LeftDriveSmart, RightDriveSmart, 219.44, 330.2, 317.5, mm, 1.3333);
+
+// Intake Motors
+motor IntakeStage3(PORT15, ratio18_1, true);
+motor IntakeStage1(PORT17, ratio18_1, false);
+motor IntakeStage2(PORT14, ratio18_1, true);
+
+// Pneumatics
+digital_out Descore(Brain.ThreeWirePort.A);
+digital_out Matchload(Brain.ThreeWirePort.B);
+
+//Limit Switch for Long Goal Sensor
+limit LimitSwitchH = limit(Brain.ThreeWirePort.H);
+
+// Odometry rotation sensor ) on port 5
+rotation OdomWheel = rotation(PORT5);
+
+//IMU sensor on port 6
+inertial IMU = inertial(PORT6);
+
+// generating and setting random seed
+void initializeRandomSeed(){
+  int systemTime = Brain.Timer.systemHighResolution();
+  double batteryCurrent = Brain.Battery.current();
+  double batteryVoltage = Brain.Battery.voltage(voltageUnits::mV);
+
+  int seed = int(batteryVoltage + batteryCurrent * 100) + systemTime;
+  srand(seed);
+}
+
+void vexcodeInit() {
+  initializeRandomSeed(); 
+}
+
+// Helper to make playing sounds from the V5 in VEXcode easier
+void playVexcodeSound(const char *soundName) {
+  printf("VEXPlaySound:%s\n", soundName);
+  wait(5, msec);
+}
+
+#pragma endregion VEXcode Generated Robot Configuration
+
+// Global controller declaration
+controller Controller1 = controller(primary);
+
+// ----------------------------------------------------------------------------
+// Project: 44585A - HSI ECHO - Pushback 2/3/2025 Code
+// Author: Marco Sanchez
+// Created: 2/3/2025
+// Configuration:#4
+// ----------------------------------------------------------------------------
+
+// Include the V5 Library
+#include "vex.h"
+
+// Allows for easier use of the VEX Library
+using namespace vex;
+
+// Odometry and PID stuffs
+
+// Odometry wheel constants (inches)
+const double ODOM_WHEEL_DIAMETER_IN = 2.0;
+const double ODOM_WHEEL_CIRCUMFERENCE_IN = M_PI * ODOM_WHEEL_DIAMETER_IN;
+
+const int ODOM_INVERT = -1;
+
+// Get odometry distance in inches from rotation sensor
+double getOdomDistanceIn() {
+  double degrees = OdomWheel.position(rotationUnits::deg);
+  double revolutions = degrees / 360.0;
+  double distance = revolutions * ODOM_WHEEL_CIRCUMFERENCE_IN;
+  return distance * ODOM_INVERT;
+}
+
+// Reset odometry wheel position
+void resetOdom() {
+  OdomWheel.resetPosition();
+}
+
+// Drive forward using odometry wheel for distance
+void driveForwardOdom(double inches, double speedPct) {
+  resetOdom();
+  Drivetrain.setDriveVelocity(speedPct, percent);
+
+  LeftDriveSmart.spin(forward);
+  RightDriveSmart.spin(forward);
+
+  while (fabs(getOdomDistanceIn()) < inches) {
+    wait(10, msec);
+  }
+
+  LeftDriveSmart.stop(brake);
+  RightDriveSmart.stop(brake);
+}
+
+// Drive backward using odometry wheel for distance
+void driveBackwardOdom(double inches, double speedPct) {
+  resetOdom();
+  Drivetrain.setDriveVelocity(speedPct, percent);
+
+  LeftDriveSmart.spin(reverse);
+  RightDriveSmart.spin(reverse);
+
+  while (fabs(getOdomDistanceIn()) < inches) {
+    wait(10, msec);
+  }
+
+  LeftDriveSmart.stop(brake);
+  RightDriveSmart.stop(brake);
+}
+
+// *** NEW *** PID turning using IMU (absolute angle, based on IMU.rotation())
+
+double kP_turn = 0.9;
+double kI_turn = 0.0;
+double kD_turn = 0.2;
+
+double turnIntegralLimit = 10.0;   // degrees
+double turnTolerance = 1.0;        // degrees
+double turnMaxSpeed = 70.0;        // percent
+double turnMinSpeed = 5.0;         // percent
+double turnTimeoutMsPer90 = 2000;  // rough timeout scaling
+
+void turnToAnglePID(double targetAngleDeg) {
+  // IMU.rotation() will be treated as 0 at start of auton
+  double error = 0.0;
+  double lastError = 0.0;
+  double integral = 0.0;
+  double derivative = 0.0;
+
+  // Simple timeout based on magnitude of turn
+  double absTarget = fabs(targetAngleDeg);
+  double timeoutMs = (absTarget / 90.0) * turnTimeoutMsPer90;
+  if (timeoutMs < 800) timeoutMs = 800; // minimum timeout
+
+  timer t;
+  t.reset();
+
+  while (true) {
+    double currentAngle = IMU.rotation(degrees);
+    error = targetAngleDeg - currentAngle;
+
+    if (fabs(error) <= turnTolerance) {
+      break;
+    }
+
+    // Timeout safety
+    if (t.time(msec) > timeoutMs) {
+      break;
+    }
+
+    // Integral with simple anti-windup
+    if (fabs(error) < turnIntegralLimit) {
+      integral += error * 0.01; // scaled by loop time (~10ms)
+    } else {
+      integral = 0;
+    }
+
+    derivative = error - lastError;
+    lastError = error;
+
+    double output = kP_turn * error + kI_turn * integral + kD_turn * derivative;
+
+    // Clamp output to max speed
+    if (output > turnMaxSpeed) output = turnMaxSpeed;
+    if (output < -turnMaxSpeed) output = -turnMaxSpeed;
+
+    // Ensure we don't stall with too low power
+    if (output > 0 && fabs(output) < turnMinSpeed) output = turnMinSpeed;
+    if (output < 0 && fabs(output) < turnMinSpeed) output = -turnMinSpeed;
+
+    LeftDriveSmart.spin(directionType::fwd, output, percent);
+    RightDriveSmart.spin(directionType::rev, output, percent);
+
+    wait(10, msec);
+  }
+
+  LeftDriveSmart.stop(brake);
+  RightDriveSmart.stop(brake);
+}
+// Begin project code
+//DEBUG PANEL, Read all valueds
+void debugPanelTask() {
+  while (true) {
+    Brain.Screen.setCursor(1, 1);
+    Brain.Screen.print("IMU Heading: %.2f deg   ", IMU.rotation(degrees));
+
+    Brain.Screen.setCursor(2, 1);
+    Brain.Screen.print("Odom Dist: %.2f in     ", getOdomDistanceIn());
+
+    Brain.Screen.setCursor(3, 1);
+    Brain.Screen.print("Odom Raw Deg: %.2f     ",
+                       OdomWheel.position(rotationUnits::deg));
+
+    wait(100, msec);
+  }
+}
+void preAutonomous(void) {
+  Brain.Screen.clearScreen();
+  Brain.Screen.print("pre auton code");
+  wait(1, seconds);
+
+  //Calibrate our IMU and zero rotation; reset odometry
+  IMU.calibrate();
+  while (IMU.isCalibrating()) {
+    wait(20, msec);
+  }
+  IMU.setRotation(0, degrees);
+  resetOdom();
+  Controller1.rumble(".-");
+}
+
+void autonomous(void) {
+  Drivetrain.setDriveVelocity(60, percent);
+  Drivetrain.setTurnVelocity(40, percent); // kept, though PID controls turn speed
+  IntakeStage3.setVelocity(100, percent);
+  IntakeStage2.setVelocity(100, percent);
+  IntakeStage1.setVelocity(100, percent);
+
+  // Use odometry for distance, IMU PID for turns in auto
+
+  // first: drive forward 36"
+  driveForwardOdom(27.0, 60.0);
+
+  // turn left 20 degrees to absolute target -20 deg (IMU.rotation)
+  turnToAnglePID(-20.0);
+  wait(10, msec);
+
+  IntakeStage1.spin(reverse);
+
+  // slow drive forward 33"
+  driveForwardOdom(12.0, 20.0);
+
+  Drivetrain.setDriveVelocity(50, percent);
+  wait(50, msec);
+  IntakeStage2.spin(forward);
+  wait(1, seconds);
+  IntakeStage1.stop();
+  IntakeStage2.stop();
+
+  // Drivetrain lines up with the goal
+  // previous: turnFor(left, 100) from -20 to -120 absolute
+  turnToAnglePID(-120.0);
+
+  Drivetrain.setDriveVelocity(60, percent);
+
+  // drive reverse 23"
+  driveBackwardOdom(10.0, 60.0); //Middle GOal Scoring
+
+  IntakeStage3.spin(forward);
+  wait(1, seconds);
+  IntakeStage3.stop();
+  IntakeStage1.spin(reverse);
+  IntakeStage2.spin(forward);
+
+  // drive forward 60"
+  driveForwardOdom(30.0, 60.0);
+
+  // previous: turnFor(right, 45) from -120 to -75 absolute
+  turnToAnglePID(-75.0);
+
+  // drive forward 23"
+  driveForwardOdom(10.0, 60.0);
+
+  // previous: turnFor(left, 75) from -75 -> -150 absolute
+  turnToAnglePID(-150.0);
+
+  Drivetrain.setTimeout(1, seconds); 
+  // drive reverse 25"
+  driveBackwardOdom(25.0, 60.0);
+
+  IntakeStage1.spin(forward);
+  IntakeStage2.spin(forward);
+  IntakeStage3.spin(forward);
+  wait(3, seconds);
+  IntakeStage1.stop();
+  IntakeStage2.stop();
+  IntakeStage3.stop();
+
+  Drivetrain.setDriveVelocity(50, percent);
+
+  // small forward and back 10"
+  driveForwardOdom(10.0, 50.0);
+  driveBackwardOdom(10.0, 50.0);
+
+  Matchload.set(true);
+}
+
+void userControl(void) {
+  Brain.Screen.clearScreen();
+
+  bool slowMode = false;      // toggle state
+  bool togglePressed = false; // debounce flag
+  bool wasPressed = false;    // limit switch rumble
+
+  while (true) {
+
+    // -------------------------
+    // Slow Mode Toggle (UP)
+    // -------------------------
+    if (Controller1.ButtonUp.pressing() && !togglePressed) {
+      slowMode = !slowMode;
+      togglePressed = true;
+    }
+    if (!Controller1.ButtonUp.pressing()) {
+      togglePressed = false;
+    }
+
+    // -------------------------
+    // Tank Drive
+    // -------------------------
+    int leftPower = Controller1.Axis3.position();
+    int rightPower = Controller1.Axis2.position();
+
+    if (slowMode) {
+      leftPower *= 0.3;
+      rightPower *= 0.3;
+    }
+
+    LeftDriveSmart.spin(fwd, leftPower, pct);
+    RightDriveSmart.spin(fwd, rightPower, pct);
+
+    // -------------------------
+    // Intake Controls
+    // -------------------------
+    IntakeStage3.setVelocity(100, percent);
+    IntakeStage2.setVelocity(100, percent);
+    IntakeStage1.setVelocity(100, percent);
+
+    if (Controller1.ButtonL1.pressing()) {
+      IntakeStage3.spin(forward);
+    } else if (Controller1.ButtonL2.pressing()) {
+      IntakeStage3.spin(reverse);
+    } else {
+      IntakeStage3.stop(coast);
+    }
+
+    if (Controller1.ButtonR1.pressing()) {
+      IntakeStage1.spin(reverse);
+      IntakeStage2.spin(forward);
+    } else if (Controller1.ButtonR2.pressing()) {
+      IntakeStage1.spin(forward);
+      IntakeStage2.spin(reverse);
+    } else {
+      IntakeStage1.stop(coast);
+      IntakeStage2.stop(coast);
+    }
+
+    // -------------------------
+    // Pneumatics
+    // -------------------------
+    if (Controller1.ButtonX.pressing()) {
+      Descore.set(true);
+    } else if (Controller1.ButtonA.pressing()) {
+      Descore.set(false);
+    }
+
+    if (Controller1.ButtonY.pressing()) {
+      Matchload.set(true);
+    } else if (Controller1.ButtonB.pressing()) {
+      Matchload.set(false);
+    }
+
+    // -------------------------
+    // Limit Switch Rumble
+    // -------------------------
+    bool pressed = LimitSwitchH.pressing();
+    if (pressed && !wasPressed) {
+      Controller1.rumble("-.-");
+    }
+    wasPressed = pressed;
+
+    wait(20, msec);
+  }
+}
+
+int main() {
+  vexcodeInit();
+  competition Competition;
+
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(userControl);
+
+  preAutonomous();
+  thread debugThread(debugPanelTask);
+
+  while (true) {
+    wait(100, sec);
+  }
+}
