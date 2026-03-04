@@ -1,0 +1,90 @@
+void RightSideAuto() {
+
+  // ---------------------------
+  // INITIAL SETUP
+  // ---------------------------
+  Descore.set(true);   // piston on
+
+  // FIRST DRIVE FORWARD (22 inches)
+  Drivetrain.setDriveVelocity(60, percent);
+  Drivetrain.driveFor(forward, 22, inches);
+
+  // TURN RIGHT 20° (mirrored from left 20°)
+  Drivetrain.setTurnVelocity(50, percent);
+  Drivetrain.turnFor(right, 20, degrees);
+
+  wait(10, msec);
+
+  // intake + slow drive
+  IntakeStage1.setVelocity(100, percent);
+  IntakeStage1.spin(reverse);
+
+  Drivetrain.setDriveVelocity(30, percent);
+  Drivetrain.driveFor(forward, 16, inches);
+
+  wait(50, msec);
+  IntakeStage2.setVelocity(100, percent);
+  IntakeStage2.spin(forward);
+
+  wait(1, seconds);
+
+  IntakeStage1.stop();
+  IntakeStage2.stop();
+
+  // small reverse
+  Drivetrain.setDriveVelocity(60, percent);
+  Drivetrain.driveFor(reverse, 4, inches);
+
+  // ---------------------------
+  // LINE UP WITH GOAL
+  // ---------------------------
+  // turn RIGHT 150° (mirror of left 150°)
+  Drivetrain.turnFor(right, 150, degrees);
+
+  // drive forward (mirrored path)
+  Drivetrain.driveFor(forward, 25, inches);
+
+  // turn LEFT 90° (mirror of right 90°)
+  Drivetrain.turnFor(left, 90, degrees);
+
+  // drive in front of goal
+  Drivetrain.driveFor(forward, 15, inches);
+
+  // turn 180 toward goal
+  Drivetrain.turnFor(right, 180, degrees);
+
+  // back into goal
+  Drivetrain.driveFor(reverse, 10, inches);
+
+  // ---------------------------
+  // SCORE SEQUENCE
+  // ---------------------------
+  IntakeStage1.spin(forward);
+  IntakeStage2.spin(forward);
+  IntakeStage3.spin(forward);
+
+  wait(3, seconds);
+
+  IntakeStage1.stop();
+  IntakeStage2.stop();
+  IntakeStage3.stop();
+
+  Descore.set(false);
+
+  // ---------------------------
+  // FINAL MOVES
+  // ---------------------------
+  Drivetrain.driveFor(forward, 16, inches);
+
+  // right 120
+  Drivetrain.turnFor(right, 120, degrees);
+
+  Drivetrain.driveFor(reverse, 12, inches);
+
+  // left 180
+  Drivetrain.turnFor(left, 180, degrees);
+
+  Drivetrain.driveFor(reverse, 26, inches);
+
+  Matchload.set(true);
+}
