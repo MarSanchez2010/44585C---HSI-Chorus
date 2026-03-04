@@ -1,0 +1,97 @@
+
+
+  Descore.set(true);
+
+  // ---------------------------
+  // FIRST TURNS + ALIGN
+  // ---------------------------
+  Drivetrain.driveFor(fwd, 20, inches);
+
+  Drivetrain.turnFor(right, 20, degrees);
+
+  stage1.spin(directionType::rev, 100, velocityUnits::pct);
+  wait(10, msec);
+
+  // intake + slow drive
+  stage1.spin(directionType::rev, 100, velocityUnits::pct);
+  stage2.spin(directionType::fwd, 100, velocityUnits::pct);
+  Drivetrain.driveFor(fwd, 16, inches);
+
+  wait(50, msec);
+  stage2.spin(directionType::fwd, 100, velocityUnits::pct);
+  wait(1000, msec);
+
+  stage1.stop();
+  stage2.stop();
+
+  Drivetrain.driveFor(reverse, 4, inches);
+
+  // ---------------------------
+  // LINE UP WITH GOAL
+  // ---------------------------
+  Drivetrain.turnFor(right, 150, degrees);
+
+  Drivetrain.driveFor(fwd, 25, inches);
+
+  Drivetrain.turnFor(left, 90, degrees);
+
+  Drivetrain.driveFor(fwd, 15, inches);
+
+  Drivetrain.turnFor(right, 180, degrees);
+
+  Drivetrain.driveFor(reverse, 12, inches);
+
+  // ---------------------------
+  // SCORE SEQUENCE
+  // ---------------------------
+  stage1.spin(fwd, 100, pct);
+  stage2.spin(fwd, 100, pct);
+  stage3.spin(fwd, 100, pct);
+  wait(3000, msec);
+
+  stage1.stop();
+  stage2.stop();
+  stage3.stop();
+
+  // ---------------------------
+  // FINAL MOVES
+  // ---------------------------
+  Drivetrain.driveFor(fwd, 12, inches);
+
+  Drivetrain.turnFor(right, 110, degrees);
+
+  Drivetrain.driveFor(reverse, 13, inches);
+
+  Descore.set(true);
+
+  Drivetrain.turnFor(left, 180, degrees);
+
+  Descore.set(false);
+
+  Drivetrain.driveFor(reverse, 21, inches);
+
+  // PARK ZONE
+  Drivetrain.driveFor(fwd, 22, inches);
+
+  Drivetrain.turnFor(right, 270, degrees);
+
+  Drivetrain.driveFor(fwd, 35, inches);
+
+  Drivetrain.turnFor(right, 180, degrees);
+
+  stage1.spin(reverse, 100, pct);
+  stage2.spin(fwd, 100, pct);
+  stage3.spin(fwd, 100, pct);
+
+  Drivetrain.driveFor(fwd, 50, inches);
+
+  // wiggle turns to get balls
+  Drivetrain.turnFor(right, 185, degrees);
+  Drivetrain.turnFor(left, 175, degrees);
+  Drivetrain.turnFor(right, 185, degrees);
+  Drivetrain.turnFor(left, 175, degrees);
+  Drivetrain.turnFor(right, 185, degrees);
+  Drivetrain.turnFor(left, 175, degrees);
+
+  Drivetrain.driveFor(fwd, 20, inches);
+}
