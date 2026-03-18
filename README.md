@@ -1,1 +1,1 @@
-This repository contains the official codebase and documentation for Team 44585A's 2025–2026 VEX Robotics project, “HSI Echo.” It includes autonomous routines, driver control logic, and subsystem integration for competition use.
+This repository contains the official codebase and documentation for Team 44585C's 2025–2026 VEX Robotics project, “HSI Chorus.” It includes autonomous routines, driver control logic, and subsystem integration for competition use.
