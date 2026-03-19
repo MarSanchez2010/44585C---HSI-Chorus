@@ -89,7 +89,7 @@ void playVexcodeSound(const char *soundName) {
 controller Controller1 = controller(primary);
 // ----------------------------------------------------------------------------
 //                                                                            
-//    Project: 44585A - HSI ECHO - Pushback 1/9/2025 Code                                            
+//    Project: 44585C - HSI Chorus - Pushback 1/9/2025 Code                                            
 //    Author: Marco Sanchez
 //    Created: 1/9/2025
 //    Configuration:#1      
